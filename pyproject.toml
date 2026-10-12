@@ -1,0 +1,18 @@
+[project]
+name = "skillz"
+version = "0.1.0"
+description = "Download, track, and organize agent skills in a namespaced local library"
+readme = "README.md"
+requires-python = ">=3.11"
+license = "MIT"
+dependencies = []
+
+[project.scripts]
+skillz = "skillz.cli:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/skillz"]

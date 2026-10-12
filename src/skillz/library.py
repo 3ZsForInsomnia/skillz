@@ -1,0 +1,56 @@
+"""Scan the library for skill folders: any folder containing SKILL.md."""
+
+import os
+from collections.abc import Iterator
+from dataclasses import dataclass
+from pathlib import Path
+
+from skillz.frontmatter import read_frontmatter
+
+SKILL_FILE = "SKILL.md"
+
+
+@dataclass(frozen=True)
+class Skill:
+    name: str
+    namespace: str
+    path: Path
+    description: str
+
+
+def scan_library(root: Path) -> list[Skill]:
+    if not root.is_dir():
+        return []
+    return sorted(
+        (_read_skill(root, folder) for folder in _skill_folders(root)),
+        key=lambda skill: (skill.namespace, skill.name),
+    )
+
+
+def _skill_folders(root: Path) -> Iterator[Path]:
+    visited: set[Path] = set()
+    for current, dirnames, filenames in os.walk(root, followlinks=True):
+        folder = Path(current)
+        real = folder.resolve()
+        already_seen = real in visited
+        visited.add(real)
+        is_skill = SKILL_FILE in filenames and folder != root
+        should_descend = not (already_seen or is_skill)
+        dirnames[:] = [name for name in dirnames if should_descend and not name.startswith(".")]
+        if is_skill and not already_seen:
+            yield folder
+
+
+def _read_skill(root: Path, folder: Path) -> Skill:
+    frontmatter = read_frontmatter((folder / SKILL_FILE).read_text(errors="replace"))
+    return Skill(
+        name=folder.name,
+        namespace=_namespace_of(root, folder),
+        path=folder,
+        description=frontmatter.get("description", ""),
+    )
+
+
+def _namespace_of(root: Path, folder: Path) -> str:
+    relative = folder.parent.relative_to(root).as_posix()
+    return "" if relative == "." else relative
