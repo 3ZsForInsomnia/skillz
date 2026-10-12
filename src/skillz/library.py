@@ -3,11 +3,16 @@
 import os
 from collections.abc import Iterator
 from dataclasses import dataclass
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 
 from skillz.frontmatter import read_frontmatter
 
 SKILL_FILE = "SKILL.md"
+
+
+def is_valid_namespace(name: str) -> bool:
+    parts = PurePosixPath(name).parts
+    return bool(parts) and parts[0] != "/" and ".." not in parts
 
 
 @dataclass(frozen=True)

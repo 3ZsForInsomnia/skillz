@@ -1,13 +1,9 @@
-import contextlib
-import io
 import json
 import os
 import unittest
 from unittest import mock
 
-from helpers import TempDirTestCase, lock_entry, write_lock, write_skill
-
-from skillz.cli import main
+from helpers import TempDirTestCase, lock_entry, run_cli, write_lock, write_skill
 
 
 class ListCommandTest(TempDirTestCase):
@@ -22,10 +18,7 @@ class ListCommandTest(TempDirTestCase):
         self.addCleanup(patcher.stop)
 
     def run_cli(self, *argv: str) -> tuple[int, str, str]:
-        stdout, stderr = io.StringIO(), io.StringIO()
-        with contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(stderr):
-            code = main(list(argv))
-        return code, stdout.getvalue(), stderr.getvalue()
+        return run_cli(*argv)
 
     def test_empty_library_says_so(self) -> None:
         self.assertEqual(self.run_cli("list"), (0, "No skills found.\n", ""))

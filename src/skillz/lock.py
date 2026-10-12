@@ -4,14 +4,16 @@ import json
 import os
 import tempfile
 from collections.abc import Mapping
-from dataclasses import asdict, dataclass, field
+from dataclasses import asdict, dataclass, field, replace
 from pathlib import Path
+
+from skillz.errors import SkillzError
 
 LOCK_FILENAME = "skillz.lock.json"
 LOCK_VERSION = 1
 
 
-class LockError(ValueError):
+class LockError(SkillzError):
     pass
 
 
@@ -55,6 +57,31 @@ def load_lock(library: Path) -> Lock:
 def save_lock(library: Path, lock: Lock) -> None:
     text = json.dumps(lock_to_dict(lock), indent=2, sort_keys=True) + "\n"
     _write_atomically(lock_path(library), text)
+
+
+def with_installed(lock: Lock, source_key: str, ref: str | None, entries: Mapping[str, SkillEntry]) -> Lock:
+    existing = lock.sources.get(source_key)
+    names = tuple(sorted({*(existing.skills if existing else ()), *entries}))
+    return Lock(
+        sources={**lock.sources, source_key: SourceEntry(ref=ref, skills=names)},
+        skills={**lock.skills, **entries},
+    )
+
+
+def without_skill(lock: Lock, name: str) -> Lock:
+    source_key = lock.skills[name].source
+    skills = {key: entry for key, entry in lock.skills.items() if key != name}
+    sources = {key: source for key, source in lock.sources.items() if key != source_key}
+    source = lock.sources.get(source_key)
+    remaining_names = tuple(n for n in source.skills if n != name) if source else ()
+    if remaining_names:
+        sources[source_key] = replace(source, skills=remaining_names)
+    return Lock(sources=sources, skills=skills)
+
+
+def with_namespace(lock: Lock, name: str, namespace: str) -> Lock:
+    moved = replace(lock.skills[name], namespace=namespace)
+    return Lock(sources=lock.sources, skills={**lock.skills, name: moved})
 
 
 def lock_to_dict(lock: Lock) -> dict[str, object]:

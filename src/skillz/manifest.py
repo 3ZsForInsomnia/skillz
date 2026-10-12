@@ -3,15 +3,17 @@
 import tomllib
 from collections.abc import Mapping
 from dataclasses import dataclass, field
-from pathlib import Path, PurePosixPath
+from pathlib import Path
 
 from skillz import paths
+from skillz.errors import SkillzError
+from skillz.library import is_valid_namespace
 
 TOP_LEVEL_KEYS = frozenset({"library", "namespaces"})
 NAMESPACE_KEYS = frozenset({"link_to", "pull_from"})
 
 
-class ManifestError(ValueError):
+class ManifestError(SkillzError):
     pass
 
 
@@ -60,9 +62,7 @@ def _parse_namespace(name: str, raw: object) -> NamespaceSettings:
 
 
 def _validate_namespace_name(name: str, where: str) -> None:
-    parts = PurePosixPath(name).parts
-    is_relative_and_clean = bool(parts) and parts[0] != "/" and ".." not in parts
-    if not is_relative_and_clean:
+    if not is_valid_namespace(name):
         raise ManifestError(f"{where}: namespace must be a relative folder path without '..'")
 
 
