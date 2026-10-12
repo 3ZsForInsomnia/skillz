@@ -24,7 +24,11 @@ def confirm_on_terminal(question: str) -> bool:
     if not sys.stdin.isatty():
         warn_on_stderr(f"{question} [y/N] no terminal to ask on; answering no")
         return False
-    return input(f"{question} [y/N] ").strip().lower() in YES_ANSWERS
+    try:
+        return input(f"{question} [y/N] ").strip().lower() in YES_ANSWERS
+    except EOFError:
+        print(file=sys.stderr)
+        return False
 
 
 def warn_on_stderr(message: str) -> None:

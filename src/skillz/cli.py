@@ -19,6 +19,8 @@ from skillz.links import sync_links
 from skillz.manifest import load_manifest
 from skillz.sources import clone_url
 
+INTERRUPTED_EXIT_CODE = 130
+
 
 def main(argv: list[str] | None = None, context: Context | None = None) -> int:
     args = build_parser().parse_args(argv)
@@ -29,6 +31,9 @@ def main(argv: list[str] | None = None, context: Context | None = None) -> int:
     except SkillzError as error:
         print(f"skillz: {error}", file=sys.stderr)
         return 1
+    except KeyboardInterrupt:
+        print(file=sys.stderr)
+        return INTERRUPTED_EXIT_CODE
     print(output)
     return 0
 
