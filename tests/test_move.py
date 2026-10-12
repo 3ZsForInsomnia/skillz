@@ -1,29 +1,18 @@
-import json
 import unittest
 
-from helpers import FakeTerminal, TempDirTestCase, make_source_repo, read_lock, run_cli, skill_file, write_skill
+from helpers import FakeTerminal, InstalledSourceTestCase, read_lock, write_skill
 
 
-class MoveCommandTest(TempDirTestCase):
-    def setUp(self) -> None:
-        super().setUp()
-        self.library = self.root / "library"
-        repo = make_source_repo(self.root / "source", {"skills/pdf/SKILL.md": skill_file("pdf")})
-        run_cli("add", "acme/skills", context=FakeTerminal().context(self.library, repo))
-
+class MoveCommandTest(InstalledSourceTestCase):
     def move(self, name: str, namespace: str, terminal: FakeTerminal | None = None) -> tuple[int, str, str]:
-        return run_cli("move", name, namespace, context=(terminal or FakeTerminal()).context(self.library))
-
-    def statuses(self) -> dict[str, tuple[str, str]]:
-        _, out, _ = run_cli("list", "-j", context=FakeTerminal().context(self.library))
-        return {s["name"]: (s["namespace"], s["status"]) for s in json.loads(out)}
+        return self.cli("move", name, namespace, terminal=terminal)
 
     def test_moves_tracked_skill_and_updates_lock(self) -> None:
         (self.library / "core").mkdir()
         code, out, _ = self.move("pdf", "core")
         self.assertEqual((code, out), (0, "Moved pdf: vendor/acme -> core\n"))
         self.assertEqual(read_lock(self.library)["skills"]["pdf"]["namespace"], "core")
-        self.assertEqual(self.statuses(), {"pdf": ("core", "unchanged")})
+        self.assertEqual(self.statuses()["pdf"], ("core", "unchanged"))
 
     def test_moves_untracked_skill(self) -> None:
         write_skill(self.library, "custom", "mine")

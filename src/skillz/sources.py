@@ -2,7 +2,7 @@
 
 import re
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 
 from skillz.errors import SkillzError
 
@@ -43,6 +43,12 @@ def parse_source(text: str) -> SourceSpec:
         if spec:
             return spec
     raise SourceError(f"unrecognized source {text!r}; expected owner/repo or a GitHub URL")
+
+
+def source_from_key(key: str) -> SourceSpec:
+    """Rebuild a spec from its lock key: owner/repo, or owner/repo@ref."""
+    repo, _, ref = key.partition("@")
+    return replace(parse_source(repo), ref=ref or None)
 
 
 def clone_url(spec: SourceSpec) -> str:

@@ -79,9 +79,12 @@ def without_skill(lock: Lock, name: str) -> Lock:
     return Lock(sources=sources, skills=skills)
 
 
+def with_entry(lock: Lock, name: str, entry: SkillEntry) -> Lock:
+    return Lock(sources=lock.sources, skills={**lock.skills, name: entry})
+
+
 def with_namespace(lock: Lock, name: str, namespace: str) -> Lock:
-    moved = replace(lock.skills[name], namespace=namespace)
-    return Lock(sources=lock.sources, skills={**lock.skills, name: moved})
+    return with_entry(lock, name, replace(lock.skills[name], namespace=namespace))
 
 
 def lock_to_dict(lock: Lock) -> dict[str, object]:

@@ -2,19 +2,15 @@
 
 import shutil
 from collections.abc import Callable, Mapping, Sequence
-from datetime import UTC, datetime
 from pathlib import Path, PurePosixPath
 
 from skillz.checkout import Checkout, open_checkout
 from skillz.commands.common import CANCELLED, ensure_namespace, index_skills, require_valid_namespace
+from skillz.commands.installing import install_from_checkout
 from skillz.context import Context
-from skillz.copying import copy_skill
 from skillz.errors import SkillzError
-from skillz.hashing import content_hash
 from skillz.lock import SkillEntry, load_lock, save_lock, with_installed
 from skillz.sources import SourceSpec, parse_source
-
-TIMESTAMP_FORMAT = "%Y-%m-%dT%H:%M:%SZ"
 
 
 def run_add(context: Context, source: str, names: Sequence[str], namespace: str | None) -> str:
@@ -29,7 +25,6 @@ def run_add(context: Context, source: str, names: Sequence[str], namespace: str 
         _reject_existing(context, chosen, lock.skills)
         if not ensure_namespace(context, target, create_without_asking=namespace is None):
             return CANCELLED
-        checkout.materialize(chosen.values())
         entries = _install_all(context, checkout, spec, chosen, target)
         save_lock(context.library, with_installed(lock, spec.key, spec.ref, entries))
     return f"Added to {target}: {', '.join(sorted(entries))}"
@@ -91,25 +86,11 @@ def _install_all(
             if dest.exists():
                 raise SkillzError(f"{dest} already exists")
             installed.append(dest)
-            entries[name] = _install(context, checkout, spec, path, dest, namespace)
+            entries[name] = install_from_checkout(
+                context, checkout, namespace=namespace, source=spec.key, path=path, dest=dest
+            )
         return entries
     except BaseException:
         for folder in installed:
             shutil.rmtree(folder, ignore_errors=True)
         raise
-
-
-def _install(
-    context: Context, checkout: Checkout, spec: SourceSpec, path: str, dest: Path, namespace: str
-) -> SkillEntry:
-    for warning in copy_skill(checkout.folder(path), dest, checkout.root):
-        context.warn(warning)
-    return SkillEntry(
-        namespace=namespace,
-        source=spec.key,
-        path=path,
-        commit=checkout.commit,
-        upstream_hash=checkout.tree_hash(path),
-        content_hash=content_hash(dest),
-        installed_at=datetime.now(UTC).strftime(TIMESTAMP_FORMAT),
-    )

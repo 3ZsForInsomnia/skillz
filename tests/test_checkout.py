@@ -1,8 +1,9 @@
 import unittest
 
-from helpers import TempDirTestCase, git, make_source_repo, skill_file
+from helpers import TempDirTestCase, commit_all, git, make_source_repo, skill_file
 
 from skillz.checkout import find_skill_paths, open_checkout
+from skillz.errors import SkillzError
 
 
 class FindSkillPathsTest(unittest.TestCase):
@@ -43,11 +44,30 @@ class OpenCheckoutTest(TempDirTestCase):
         with open_checkout(f"file://{self.repo}", None, "source") as checkout:
             self.assertEqual(checkout.tree_hash("skills/pdf"), git(self.repo, "rev-parse", "HEAD:skills/pdf").strip())
 
-    def test_materialize_checks_out_only_requested_folders(self) -> None:
+    def test_export_writes_only_the_requested_folder(self) -> None:
         with open_checkout(f"file://{self.repo}", None, "source") as checkout:
-            checkout.materialize(["skills/pdf"])
-            self.assertTrue((checkout.folder("skills/pdf") / "SKILL.md").is_file())
-            self.assertFalse(checkout.folder("skills/docx").exists())
+            exported = checkout.export("skills/pdf")
+            self.assertEqual((exported.folder / "SKILL.md").read_text(), skill_file("pdf"))
+            self.assertFalse((exported.root / "skills/docx").exists())
+
+    def test_export_at_an_older_commit(self) -> None:
+        old_commit = git(self.repo, "rev-parse", "HEAD").strip()
+        (self.repo / "skills/pdf/SKILL.md").write_text("newer")
+        commit_all(self.repo)
+        with open_checkout(f"file://{self.repo}", None, "source") as checkout:
+            checkout.fetch_commit(old_commit)
+            self.assertEqual((checkout.export("skills/pdf", old_commit).folder / "SKILL.md").read_text(), skill_file("pdf"))
+            self.assertEqual((checkout.export("skills/pdf").folder / "SKILL.md").read_text(), "newer")
+
+    def test_fetching_an_unknown_commit_is_a_clear_error(self) -> None:
+        with open_checkout(f"file://{self.repo}", None, "source") as checkout:
+            with self.assertRaisesRegex(SkillzError, "no longer available upstream"):
+                checkout.fetch_commit("0" * 40)
+
+    def test_has_path_reports_missing_folders(self) -> None:
+        with open_checkout(f"file://{self.repo}", None, "source") as checkout:
+            self.assertTrue(checkout.has_path("skills/pdf"))
+            self.assertFalse(checkout.has_path("skills/gone"))
 
     def test_clone_is_deleted_afterwards(self) -> None:
         with open_checkout(f"file://{self.repo}", None, "source") as checkout:

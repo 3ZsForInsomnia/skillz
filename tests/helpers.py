@@ -89,6 +89,36 @@ class FakeTerminal:
         )
 
 
+class InstalledSourceTestCase(TempDirTestCase):
+    """A library with pdf and docx added from a local source repo standing in for acme/skills."""
+
+    def setUp(self) -> None:
+        super().setUp()
+        self.library = self.root / "library"
+        self.repo = make_source_repo(
+            self.root / "source",
+            {"skills/pdf/SKILL.md": skill_file("pdf"), "skills/docx/SKILL.md": skill_file("docx")},
+        )
+        self.cli("add", "acme/skills")
+
+    def cli(self, *argv: str, terminal: FakeTerminal | None = None) -> tuple[int, str, str]:
+        return run_cli(*argv, context=(terminal or FakeTerminal()).context(self.library, self.repo))
+
+    def statuses(self) -> dict[str, tuple[str, str]]:
+        _, out, _ = self.cli("list", "-j")
+        return {s["name"]: (s["namespace"], s["status"]) for s in json.loads(out)}
+
+    def edit_upstream(self, relative: str, content: str) -> None:
+        (self.repo / relative).write_text(content)
+        commit_all(self.repo)
+
+    def edit_local(self, name: str, content: str) -> None:
+        (self.library / "vendor/acme" / name / "SKILL.md").write_text(content)
+
+    def local_text(self, name: str, namespace: str = "vendor/acme") -> str:
+        return (self.library / namespace / name / "SKILL.md").read_text()
+
+
 def lock_entry(namespace: str, content_hash: str = "sha256:abc", source: str = "acme/skills") -> dict:
     return {
         "namespace": namespace,

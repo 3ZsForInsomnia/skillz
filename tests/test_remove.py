@@ -1,20 +1,11 @@
 import unittest
 
-from helpers import FakeTerminal, TempDirTestCase, make_source_repo, read_lock, run_cli, skill_file, write_skill
+from helpers import FakeTerminal, InstalledSourceTestCase, read_lock, write_skill
 
 
-class RemoveCommandTest(TempDirTestCase):
-    def setUp(self) -> None:
-        super().setUp()
-        self.library = self.root / "library"
-        repo = make_source_repo(
-            self.root / "source",
-            {"skills/pdf/SKILL.md": skill_file("pdf"), "skills/docx/SKILL.md": skill_file("docx")},
-        )
-        run_cli("add", "acme/skills", context=FakeTerminal().context(self.library, repo))
-
+class RemoveCommandTest(InstalledSourceTestCase):
     def remove(self, *names: str, terminal: FakeTerminal) -> tuple[int, str, str]:
-        return run_cli("remove", *names, context=terminal.context(self.library))
+        return self.cli("remove", *names, terminal=terminal)
 
     def test_confirmed_removal_deletes_folder_and_lock_entry(self) -> None:
         code, out, _ = self.remove("pdf", terminal=FakeTerminal(True))

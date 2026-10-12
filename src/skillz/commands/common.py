@@ -1,8 +1,11 @@
 """Helpers shared by commands that change the library."""
 
+from collections.abc import Sequence
+
 from skillz.context import Context
 from skillz.errors import SkillzError
 from skillz.library import Skill, is_valid_namespace, scan_library
+from skillz.lock import Lock
 
 CANCELLED = "Cancelled."
 
@@ -16,6 +19,15 @@ def index_skills(context: Context) -> dict[str, Skill]:
             raise SkillzError(f"skill {skill.name!r} exists in more than one namespace ({namespaces})")
         index[skill.name] = skill
     return index
+
+
+def select_tracked(lock: Lock, names: Sequence[str]) -> list[str]:
+    """The requested names, deduplicated, or every tracked skill when none are given."""
+    selected = list(dict.fromkeys(names)) or sorted(lock.skills)
+    untracked = [name for name in selected if name not in lock.skills]
+    if untracked:
+        raise SkillzError(f"not tracked by skillz: {', '.join(untracked)}")
+    return selected
 
 
 def find_skill(context: Context, name: str) -> Skill:
