@@ -3,7 +3,7 @@
 import argparse
 import sys
 
-from skillz import paths
+from skillz import help_text, paths
 from skillz.commands.add import run_add
 from skillz.commands.list import run_list
 from skillz.commands.move import run_move
@@ -52,12 +52,27 @@ def default_context() -> Context:
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="skillz",
-        description="Download, track, and organize agent skills in a namespaced local library.",
+        description=help_text.OVERVIEW,
+        epilog=help_text.OVERVIEW_EPILOG,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     commands = parser.add_subparsers(dest="command", required=True, metavar="<command>")
     for add_command in COMMANDS:
         add_command(commands)
     return parser
+
+
+def _command(commands: argparse._SubParsersAction, name: str, summary: str) -> argparse.ArgumentParser:
+    """A visible subcommand: summary for `skillz -h`, long description for `skillz <name> -h`.
+    The description's examples section is shown last, after the arguments."""
+    description, _, examples = help_text.DESCRIPTIONS[name].partition(f"\n\n{help_text.EXAMPLES_HEADING}")
+    return commands.add_parser(
+        name,
+        help=summary,
+        description=description,
+        epilog=f"{help_text.EXAMPLES_HEADING}{examples}" if examples else None,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
 
 
 def _argument(command: argparse.ArgumentParser, *flags: str, completer: str = "", **options) -> None:
@@ -66,13 +81,13 @@ def _argument(command: argparse.ArgumentParser, *flags: str, completer: str = ""
 
 
 def _add_list(commands: argparse._SubParsersAction) -> None:
-    command = commands.add_parser("list", help="list every skill in the library with its status")
+    command = _command(commands, "list", "list every skill in the library with its status")
     _argument(command, "-j", "--json", action="store_true", help="print JSON instead of a table")
     command.set_defaults(handler=lambda context, args: run_list(context, args.json))
 
 
 def _add_add(commands: argparse._SubParsersAction) -> None:
-    command = commands.add_parser("add", help="download skills from a source into the library")
+    command = _command(commands, "add", "download skills from a source into the library")
     _argument(command, "source", help="owner/repo, or a GitHub URL to a repo or a skill folder")
     _argument(command, "names", nargs="*", help="skills to install; all skills in the repo if omitted")
     _argument(
@@ -82,27 +97,27 @@ def _add_add(commands: argparse._SubParsersAction) -> None:
 
 
 def _add_remove(commands: argparse._SubParsersAction) -> None:
-    command = commands.add_parser("remove", help="delete tracked skills and drop them from the lock")
+    command = _command(commands, "remove", "delete tracked skills and drop them from the lock")
     _argument(command, "names", nargs="+", completer="tracked_skills", help="skills to remove")
     command.set_defaults(handler=lambda context, args: run_remove(context, args.names))
 
 
 def _add_move(commands: argparse._SubParsersAction) -> None:
-    command = commands.add_parser("move", help="move a skill to another namespace")
+    command = _command(commands, "move", "move a skill to another namespace")
     _argument(command, "name", completer="managed_skills", help="skill to move")
     _argument(command, "namespace", completer="namespaces", help="namespace to move it into")
     command.set_defaults(handler=lambda context, args: run_move(context, args.name, args.namespace))
 
 
 def _add_status(commands: argparse._SubParsersAction) -> None:
-    command = commands.add_parser("status", help="show tracked skills with local edits or upstream updates")
+    command = _command(commands, "status", "show tracked skills with local edits or upstream updates")
     _argument(command, "names", nargs="*", completer="tracked_skills", help="skills to check; all tracked if omitted")
     _argument(command, "-d", "--diff", action="store_true", help="show a git diff for each change")
     command.set_defaults(handler=lambda context, args: run_status(context, args.names, args.diff))
 
 
 def _add_update(commands: argparse._SubParsersAction) -> None:
-    command = commands.add_parser("update", help="replace tracked skills with their upstream versions")
+    command = _command(commands, "update", "replace tracked skills with their upstream versions")
     _argument(command, "names", nargs="*", completer="tracked_skills", help="skills to update; all tracked if omitted")
     _argument(command, "-c", "--check", action="store_true", help="only report available updates")
     _argument(command, "-f", "--force", action="store_true", help="overwrite local edits (requires skill names)")
@@ -110,13 +125,13 @@ def _add_update(commands: argparse._SubParsersAction) -> None:
 
 
 def _add_reset(commands: argparse._SubParsersAction) -> None:
-    command = commands.add_parser("reset", help="restore skills to exactly what the lock records")
+    command = _command(commands, "reset", "restore skills to exactly what the lock records")
     _argument(command, "names", nargs="+", completer="tracked_skills", help="skills to reset")
     command.set_defaults(handler=lambda context, args: run_reset(context, args.names))
 
 
 def _add_completions(commands: argparse._SubParsersAction) -> None:
-    command = commands.add_parser("completions", help="print the zsh completion script")
+    command = _command(commands, "completions", "print the zsh completion script")
     command.set_defaults(handler=lambda context, args: zsh_script(build_parser()))
 
 
