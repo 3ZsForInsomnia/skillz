@@ -2,18 +2,19 @@
 
 from collections.abc import Sequence
 
+from skillz.catalog import all_skills, pulled_namespaces
 from skillz.context import Context
 from skillz.errors import SkillzError
-from skillz.library import Skill, is_valid_namespace, scan_library
+from skillz.library import Skill, is_valid_namespace
 from skillz.lock import Lock
 
 CANCELLED = "Cancelled."
 
 
 def index_skills(context: Context) -> dict[str, Skill]:
-    """Skills on disk by name. Names must be unique across the library."""
+    """Skills on disk, pulled ones included, by name. Names must be unique across all of them."""
     index: dict[str, Skill] = {}
-    for skill in scan_library(context.library):
+    for skill in all_skills(context):
         if skill.name in index:
             namespaces = f"{index[skill.name].namespace or '-'} and {skill.namespace or '-'}"
             raise SkillzError(f"skill {skill.name!r} exists in more than one namespace ({namespaces})")
@@ -37,9 +38,17 @@ def find_skill(context: Context, name: str) -> Skill:
     return skill
 
 
-def require_valid_namespace(namespace: str) -> None:
+def require_writable_namespace(context: Context, namespace: str) -> None:
     if not is_valid_namespace(namespace):
         raise SkillzError(f"invalid namespace {namespace!r}; use a relative folder path without '..'")
+    for pulled, folder in pulled_namespaces(context).items():
+        if namespace == pulled or namespace.startswith(f"{pulled}/"):
+            raise SkillzError(f"namespace {namespace!r} is pulled from {folder}; skillz doesn't write there")
+
+
+def require_managed(skill: Skill) -> None:
+    if skill.external:
+        raise SkillzError(f"{skill.name} is external (pulled into {skill.namespace}); skillz doesn't modify it")
 
 
 def ensure_namespace(context: Context, namespace: str, create_without_asking: bool = False) -> bool:

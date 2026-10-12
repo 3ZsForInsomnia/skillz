@@ -17,6 +17,7 @@ class Status(StrEnum):
     UNTRACKED = "untracked"
     MISSING = "missing"
     MISPLACED = "misplaced"
+    EXTERNAL = "external"
 
 
 @dataclass(frozen=True)
@@ -39,6 +40,8 @@ def build_reports(skills: Iterable[Skill], lock: Lock, hash_fn: HashFn) -> list[
 
 
 def classify(skill: Skill, entry: SkillEntry | None, hash_fn: HashFn) -> Status:
+    if skill.external:
+        return Status.EXTERNAL
     if entry is None:
         return Status.UNTRACKED
     if skill.namespace != entry.namespace:

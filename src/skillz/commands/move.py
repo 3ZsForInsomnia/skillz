@@ -2,16 +2,23 @@
 
 import shutil
 
-from skillz.commands.common import CANCELLED, ensure_namespace, find_skill, require_valid_namespace
+from skillz.commands.common import (
+    CANCELLED,
+    ensure_namespace,
+    find_skill,
+    require_managed,
+    require_writable_namespace,
+)
 from skillz.context import Context
 from skillz.errors import SkillzError
 from skillz.lock import load_lock, save_lock, with_namespace
 
 
 def run_move(context: Context, name: str, namespace: str) -> str:
-    require_valid_namespace(namespace)
+    require_writable_namespace(context, namespace)
     lock = load_lock(context.library)
     skill = find_skill(context, name)
+    require_managed(skill)
     if skill.namespace == namespace:
         raise SkillzError(f"{name} is already in {namespace}")
     dest = context.library / namespace / name

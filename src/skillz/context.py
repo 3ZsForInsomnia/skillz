@@ -1,10 +1,11 @@
 """Everything a command needs from the outside world, passed in so tests can replace it."""
 
 import sys
-from collections.abc import Callable
-from dataclasses import dataclass
+from collections.abc import Callable, Mapping
+from dataclasses import dataclass, field
 from pathlib import Path
 
+from skillz.manifest import NamespaceSettings
 from skillz.sources import SourceSpec
 
 YES_ANSWERS = frozenset({"y", "yes"})
@@ -16,6 +17,7 @@ class Context:
     confirm: Callable[[str], bool]
     clone_url: Callable[[SourceSpec], str]
     warn: Callable[[str], None]
+    namespaces: Mapping[str, NamespaceSettings] = field(default_factory=dict)
 
 
 def confirm_on_terminal(question: str) -> bool:

@@ -21,13 +21,15 @@ class Skill:
     namespace: str
     path: Path
     description: str
+    external: bool = False
 
 
-def scan_library(root: Path) -> list[Skill]:
+def scan_library(root: Path, namespace_prefix: str = "", external: bool = False) -> list[Skill]:
+    """Find skills under root. External scans (pulled folders) put every namespace under a prefix."""
     if not root.is_dir():
         return []
     return sorted(
-        (_read_skill(root, folder) for folder in _skill_folders(root)),
+        (_read_skill(root, folder, namespace_prefix, external) for folder in _skill_folders(root)),
         key=lambda skill: (skill.namespace, skill.name),
     )
 
@@ -46,16 +48,18 @@ def _skill_folders(root: Path) -> Iterator[Path]:
             yield folder
 
 
-def _read_skill(root: Path, folder: Path) -> Skill:
+def _read_skill(root: Path, folder: Path, namespace_prefix: str, external: bool) -> Skill:
     frontmatter = read_frontmatter((folder / SKILL_FILE).read_text(errors="replace"))
     return Skill(
         name=folder.name,
-        namespace=_namespace_of(root, folder),
+        namespace=_namespace_of(root, folder, namespace_prefix),
         path=folder,
         description=frontmatter.get("description", ""),
+        external=external,
     )
 
 
-def _namespace_of(root: Path, folder: Path) -> str:
+def _namespace_of(root: Path, folder: Path, prefix: str) -> str:
     relative = folder.parent.relative_to(root).as_posix()
-    return "" if relative == "." else relative
+    parts = [part for part in (prefix, "" if relative == "." else relative) if part]
+    return "/".join(parts)

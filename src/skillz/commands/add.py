@@ -5,7 +5,7 @@ from collections.abc import Callable, Mapping, Sequence
 from pathlib import Path, PurePosixPath
 
 from skillz.checkout import Checkout, open_checkout
-from skillz.commands.common import CANCELLED, ensure_namespace, index_skills, require_valid_namespace
+from skillz.commands.common import CANCELLED, ensure_namespace, index_skills, require_writable_namespace
 from skillz.commands.installing import install_from_checkout
 from skillz.context import Context
 from skillz.errors import SkillzError
@@ -18,7 +18,7 @@ def run_add(context: Context, source: str, names: Sequence[str], namespace: str 
     if spec.path and names:
         raise SkillzError("a skill folder URL installs exactly that skill; don't also pass skill names")
     target = namespace or spec.default_namespace
-    require_valid_namespace(target)
+    require_writable_namespace(context, target)
     lock = load_lock(context.library)
     with open_checkout(context.clone_url(spec), spec.ref, spec.repo) as checkout:
         chosen = choose_skills(checkout.skill_paths, spec, names, checkout.tree_hash)

@@ -8,6 +8,7 @@ from pathlib import Path
 
 from skillz.cli import main
 from skillz.context import Context
+from skillz.manifest import parse_manifest
 
 
 def run_cli(*argv: str, context: Context | None = None) -> tuple[int, str, str]:
@@ -80,12 +81,14 @@ class FakeTerminal:
             raise AssertionError(f"unexpected prompt: {question}")
         return self.answers.pop(0)
 
-    def context(self, library: Path, repo: Path | None = None) -> Context:
+    def context(self, library: Path, repo: Path | None = None, namespaces: dict | None = None) -> Context:
+        """namespaces uses the skillz.toml shape, e.g. {"core": {"link_to": "/some/path"}}."""
         return Context(
             library=library,
             confirm=self.confirm,
             clone_url=lambda spec: f"file://{repo}",
             warn=self.warnings.append,
+            namespaces=parse_manifest({"namespaces": namespaces or {}}).namespaces,
         )
 
 

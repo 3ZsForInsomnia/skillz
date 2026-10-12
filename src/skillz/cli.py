@@ -13,6 +13,7 @@ from skillz.commands.status import run_status
 from skillz.commands.update import run_update
 from skillz.context import Context, confirm_on_terminal, warn_on_stderr
 from skillz.errors import SkillzError
+from skillz.links import sync_links
 from skillz.manifest import load_manifest
 from skillz.sources import clone_url
 
@@ -20,7 +21,9 @@ from skillz.sources import clone_url
 def main(argv: list[str] | None = None, context: Context | None = None) -> int:
     args = build_parser().parse_args(argv)
     try:
-        output = args.handler(context or default_context(), args)
+        context = context or default_context()
+        sync_links(context)
+        output = args.handler(context, args)
     except SkillzError as error:
         print(f"skillz: {error}", file=sys.stderr)
         return 1
@@ -30,7 +33,13 @@ def main(argv: list[str] | None = None, context: Context | None = None) -> int:
 
 def default_context() -> Context:
     manifest = load_manifest(paths.manifest_path())
-    return Context(library=manifest.library, confirm=confirm_on_terminal, clone_url=clone_url, warn=warn_on_stderr)
+    return Context(
+        library=manifest.library,
+        confirm=confirm_on_terminal,
+        clone_url=clone_url,
+        warn=warn_on_stderr,
+        namespaces=manifest.namespaces,
+    )
 
 
 def build_parser() -> argparse.ArgumentParser:
