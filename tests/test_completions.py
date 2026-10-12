@@ -46,6 +46,21 @@ class CompletionScriptTest(InstalledSourceTestCase):
         result = subprocess.run(["zsh", "-n"], input=self.script(), capture_output=True, text=True)
         self.assertEqual((result.returncode, result.stderr), (0, ""))
 
+    def test_name_helper_ignores_options_added_by_zsh(self) -> None:
+        if shutil.which("zsh") is None:
+            self.skipTest("zsh is not installed")
+        helpers_only = self.script().split("\n_skillz() {")[0].removeprefix("#compdef skillz\n")
+        calls = self.root / "skillz-calls"
+        driver = (
+            f'skillz() {{ print -r -- "skillz $*" >> {calls}; print -l pdf lbm; }}\n'
+            '_describe() { print -r -- "describe $1 ${(j: :)${(P)2}} ${(j: :)@[3,-1]}"; }\n'
+            f"{helpers_only}\n"
+            "_skillz_names -J -default- --managed\n"
+        )
+        result = subprocess.run(["zsh", "-f"], input=driver, capture_output=True, text=True)
+        self.assertEqual(calls.read_text(), "skillz _names --managed\n")
+        self.assertEqual(result.stdout, "describe skill pdf lbm -J -default-\n")
+
     def test_lists_visible_commands_with_their_help(self) -> None:
         script = self.script()
         self.assertTrue(script.startswith("#compdef skillz\n"))
