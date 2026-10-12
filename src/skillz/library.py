@@ -34,6 +34,18 @@ def scan_library(root: Path, namespace_prefix: str = "", external: bool = False)
     )
 
 
+def namespace_folders(root: Path) -> list[str]:
+    """Every folder in the library that isn't a skill or inside one."""
+    namespaces = []
+    for current, dirnames, filenames in os.walk(root):
+        folder = Path(current)
+        is_skill = SKILL_FILE in filenames and folder != root
+        dirnames[:] = [] if is_skill else [name for name in dirnames if not name.startswith(".")]
+        if folder != root and not is_skill:
+            namespaces.append(folder.relative_to(root).as_posix())
+    return sorted(namespaces)
+
+
 def _skill_folders(root: Path) -> Iterator[Path]:
     visited: set[Path] = set()
     for current, dirnames, filenames in os.walk(root, followlinks=True):
