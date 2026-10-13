@@ -17,16 +17,13 @@ def config_dir() -> Path:
     return _xdg_dir("XDG_CONFIG_HOME", ".config") / APP_NAME
 
 
-def data_dir() -> Path:
-    return _xdg_dir("XDG_DATA_HOME", ".local/share") / APP_NAME
-
-
 def manifest_path() -> Path:
     return config_dir() / MANIFEST_FILENAME
 
 
 def default_library_dir() -> Path:
-    return data_dir() / "skills"
+    """Skills are authored and curated, so they live with the config, next to skillz.toml."""
+    return config_dir()
 
 
 def expand(path: str) -> Path:

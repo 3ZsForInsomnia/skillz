@@ -13,7 +13,8 @@ Files:
   $XDG_CONFIG_HOME/skillz/skillz.toml   your settings: library location, namespace options
   <library>/skillz.lock.json            written by skillz: sources, commits, hashes
 
-Defaults: library at $XDG_DATA_HOME/skillz/skills (~/.local/share/skillz/skills)."""
+The library defaults to $XDG_CONFIG_HOME/skillz (~/.config/skillz), next to skillz.toml.
+Set `library = "<path>"` in skillz.toml to keep it elsewhere."""
 
 OVERVIEW_EPILOG = "Run `skillz <command> -h` for details and examples."
 

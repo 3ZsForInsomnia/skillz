@@ -14,10 +14,10 @@ class LoadManifestTest(TempDirTestCase):
         path.write_text(text)
         return path
 
-    def test_missing_file_uses_xdg_default_library(self) -> None:
-        with mock.patch.dict(os.environ, {"XDG_DATA_HOME": str(self.root / "data")}):
+    def test_missing_file_uses_xdg_config_dir_as_library(self) -> None:
+        with mock.patch.dict(os.environ, {"XDG_CONFIG_HOME": str(self.root / "config")}):
             manifest = load_manifest(self.root / "absent.toml")
-        self.assertEqual(manifest.library, self.root / "data" / "skillz" / "skills")
+        self.assertEqual(manifest.library, self.root / "config" / "skillz")
         self.assertEqual(dict(manifest.namespaces), {})
 
     def test_reads_library_and_namespace_settings(self) -> None:
